@@ -86,6 +86,12 @@ namespace physical_modeling_piano
             }
         }
 #else
+        // 前回スキップしたのがまだ終わってないことがある
+        while (workerActive_)
+        {
+            __wfe();
+        }
+
         workNodes_.clear();
         auto *node = active_;
         while (node)
@@ -101,17 +107,23 @@ namespace physical_modeling_piano
         currentPedalState_ = &pedal;
 
         workIdx_ = 0;
-        workerActive_ = true;
-        __sev();
+        if (!workNodes_.empty())
+        {
+            workerActive_ = true;
+            __sev();
+        }
 
         int nn = process(samples, nSamples);
         //    printf("mn = %d\n", nn);
         (void)nn;
 
-        while (workerActive_)
+        if (nn < workNodes_.size())
         {
-            __wfe();
-            //            tight_loop_contents();
+            while (workerActive_)
+            {
+                __wfe();
+                //            tight_loop_contents();
+            }
         }
 
         int n = 0;
